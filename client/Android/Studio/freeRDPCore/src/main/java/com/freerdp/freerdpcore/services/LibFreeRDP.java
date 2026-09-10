@@ -50,6 +50,14 @@ public class LibFreeRDP
 	public static final int EXPERIMENTAL_REMOTEAPP = 0;
 	public static final int EXPERIMENTAL_CAMERA = 1;
 
+	// Native touch contact flags, keep in sync with include/freerdp/client.h
+	// (FreeRDPTouchEventType).
+	public static final int TOUCH_FLAG_DOWN = 0x01;
+	public static final int TOUCH_FLAG_UP = 0x02;
+	public static final int TOUCH_FLAG_MOTION = 0x04;
+	public static final int TOUCH_FLAG_CANCEL = 0x08;
+	public static final int TOUCH_FLAG_HAS_PRESSURE = 0x100;
+
 	private static boolean tryLoad(String[] libraries)
 	{
 		boolean success = false;
@@ -159,6 +167,11 @@ public class LibFreeRDP
 	                                                      int width, int height);
 
 	private static native boolean freerdp_send_cursor_event(long inst, int x, int y, int flags);
+
+	private static native boolean freerdp_send_touch_event(long inst, int flags, int contactId,
+	                                                       int pressure, int x, int y);
+
+	private static native boolean freerdp_is_native_touch_supported(long inst);
 
 	private static native boolean freerdp_send_key_event(long inst, int keycode, boolean down);
 
@@ -425,6 +438,13 @@ public class LibFreeRDP
 		args.add("/clipboard");
 		args.add("/disp");
 
+		if (ApplicationSettingsActivity.getNativeTouch(context))
+		{
+			// Request the RDPEI (MS-RDPINPUT) channel, without it the remote can never
+			// receive native touch contacts (see freerdp_client_load_addins()).
+			args.add("/multitouch");
+		}
+
 		if (advanced.getRedirectPrinter())
 			args.add("/printer:aFreeRDP Print,Microsoft Print to PDF,default");
 
@@ -557,6 +577,19 @@ public class LibFreeRDP
 	public static boolean sendCursorEvent(long inst, int x, int y, int flags)
 	{
 		return freerdp_send_cursor_event(inst, x, y, flags);
+	}
+
+	// Forwards one native touch contact event (flags = TOUCH_FLAG_*).
+	public static boolean sendTouchEvent(long inst, int flags, int contactId, int pressure, int x,
+	                                    int y)
+	{
+		return freerdp_send_touch_event(inst, flags, contactId, pressure, x, y);
+	}
+
+	// True if the remote negotiated the RDPEI channel and accepts native touch input.
+	public static boolean isNativeTouchSupported(long inst)
+	{
+		return freerdp_is_native_touch_supported(inst);
 	}
 
 	public static boolean sendKeyEvent(long inst, int keycode, boolean down)

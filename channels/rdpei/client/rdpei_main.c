@@ -181,15 +181,23 @@ static UINT rdpei_add_frame(RdpeiClientContext* context)
 		}
 		else if (contactPoint->active)
 		{
+			/* A contact that is still active but did not change anything must not be
+			 * reported again: only the first frame of a contact may carry DOWN, every
+			 * following frame has to use UPDATE. Report the contact once for that
+			 * rewrite, then stay silent until it actually changes again.
+			 *
+			 * Reporting unchanged contacts on every 20ms poll tick floods the server
+			 * with identical UPDATE frames, which breaks its press-and-hold vs. tap
+			 * detection (a long press is followed by a phantom click on release). */
 			if (contact->contactFlags & RDPINPUT_CONTACT_FLAG_DOWN)
 			{
-				contact->contactFlags = RDPINPUT_CONTACT_FLAG_UPDATE;
-				contact->contactFlags |= RDPINPUT_CONTACT_FLAG_INRANGE;
-				contact->contactFlags |= RDPINPUT_CONTACT_FLAG_INCONTACT;
-			}
+				contact->contactFlags = RDPINPUT_CONTACT_FLAG_UPDATE |
+				                        RDPINPUT_CONTACT_FLAG_INRANGE |
+				                        RDPINPUT_CONTACT_FLAG_INCONTACT;
 
-			contacts[frame.contactCount] = *contact;
-			frame.contactCount++;
+				contacts[frame.contactCount] = *contact;
+				frame.contactCount++;
+			}
 		}
 		if (contact->contactFlags & RDPINPUT_CONTACT_FLAG_UP)
 		{

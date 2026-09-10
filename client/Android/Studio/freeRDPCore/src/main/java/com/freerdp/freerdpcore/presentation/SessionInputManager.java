@@ -28,8 +28,9 @@ import com.freerdp.freerdpcore.utils.KeyboardMapper;
 import com.freerdp.freerdpcore.utils.Mouse;
 
 public class SessionInputManager
-    implements SessionView.SessionViewListener, TouchPointerView.TouchPointerListener,
-               KeyboardMapper.KeyProcessingListener, ExtendedKeyboardView.Listener
+    implements SessionView.SessionViewListener, SessionView.NativeTouchListener,
+               TouchPointerView.TouchPointerListener, KeyboardMapper.KeyProcessingListener,
+               ExtendedKeyboardView.Listener
 {
 	private static final String TAG = "FreeRDP.SessionInputManager";
 
@@ -41,6 +42,8 @@ public class SessionInputManager
 
 	private static final int MSG_SEND_MOVE_EVENT = 1;
 	private static final int MSG_SCROLLING_REQUESTED = 2;
+	// the RDPEI channel is negotiated shortly after the connection is up
+	private static final int NATIVE_TOUCH_RECHECK_DELAY_MS = 1500;
 
 	private final Context context;
 	private final KeyboardMapper keyboardMapper;
@@ -77,6 +80,7 @@ public class SessionInputManager
 		this.keyboardMapper.init(context);
 
 		keyboard.setListener(this);
+		sessionView.setNativeTouchListener(this);
 	}
 
 	// Binds this manager to a live FreeRDP session. Until called, all input events are dropped.
@@ -85,6 +89,9 @@ public class SessionInputManager
 		this.instance = instance;
 		this.bitmap = surface;
 		keyboardMapper.reset(this);
+		updateNativeTouchMode();
+		// the RDPEI channel may only be negotiated once the connection is fully up
+		handler.postDelayed(this::updateNativeTouchMode, NATIVE_TOUCH_RECHECK_DELAY_MS);
 	}
 
 	// Called when the session bitmap is created or replaced (OnSettingsChanged / OnGraphicsResize).
@@ -270,6 +277,21 @@ public class SessionInputManager
 	// ****************************************************************************
 	// Private helpers
 
+	// Enables native (MS-RDPEI) touch forwarding when the user asked for it AND the remote
+	// negotiated the RDPEI channel. Otherwise the established mouse-gesture handling is kept,
+	// so turning the preference on never degrades input on remotes without touch support.
+	private void updateNativeTouchMode()
+	{
+		final boolean wanted =
+		    (instance != 0) && ApplicationSettingsActivity.getNativeTouch(context);
+		final boolean supported = wanted && LibFreeRDP.isNativeTouchSupported(instance);
+		final boolean enabled = wanted && supported;
+
+		sessionView.setNativeTouchEnabled(enabled);
+		Log.i(TAG, "native touch: requested=" + wanted + ", remote supports RDPEI=" + supported +
+		               " -> " + (enabled ? "enabled" : "disabled"));
+	}
+
 	private void sendDelayedMoveEvent(int x, int y)
 	{
 		if (handler.hasMessages(MSG_SEND_MOVE_EVENT))
@@ -375,6 +397,30 @@ public class SessionInputManager
 		if (instance == 0)
 			return;
 		LibFreeRDP.sendCursorEvent(instance, 0, 0, Mouse.getHScrollEvent(context, right));
+	}
+
+	// ****************************************************************************
+	// SessionView.NativeTouchListener
+
+	@Override public void onNativeTouch(int flags, int contactId, float pressure, int x, int y)
+	{
+		if (instance == 0)
+			return;
+
+		// Pressure is optional in MS-RDPEI: only flag it when the device reports one.
+		int touchFlags = flags;
+		int scaledPressure = 0;
+		if (pressure > 0.0f)
+		{
+			touchFlags |= LibFreeRDP.TOUCH_FLAG_HAS_PRESSURE;
+			scaledPressure = (int)(pressure * 1024.0f);
+			if (scaledPressure > 1024)
+				scaledPressure = 1024;
+		}
+
+		Log.v(TAG, "native touch: flags=" + touchFlags + " id=" + contactId + " (" + x + ", " + y +
+		               ") pressure=" + scaledPressure);
+		LibFreeRDP.sendTouchEvent(instance, touchFlags, contactId, scaledPressure, x, y);
 	}
 
 	// ****************************************************************************

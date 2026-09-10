@@ -1116,6 +1116,49 @@ Java_com_freerdp_freerdpcore_services_LibFreeRDP_freerdp_1send_1cursor_1event(
 	return JNI_TRUE;
 }
 
+JNIEXPORT jboolean JNICALL
+Java_com_freerdp_freerdpcore_services_LibFreeRDP_freerdp_1send_1touch_1event(
+    JNIEnv* env, jclass cls, jlong instance, jint flags, jint contactId, jint pressure, jint x,
+    jint y)
+{
+	WINPR_UNUSED(env);
+	WINPR_UNUSED(cls);
+	ANDROID_EVENT* event;
+	freerdp* inst = (freerdp*)instance;
+	event = (ANDROID_EVENT*)android_event_touch_new((UINT32)flags, (INT32)contactId,
+	                                                (UINT32)pressure, (INT32)x, (INT32)y);
+
+	if (!event)
+		return JNI_FALSE;
+
+	if (!android_push_event(inst, event))
+	{
+		android_event_free(event);
+		return JNI_FALSE;
+	}
+
+	WLog_DBG(TAG, "send_touch_event: flags=%d id=%d (%d, %d) pressure=%d", flags, contactId, x, y,
+	         pressure);
+	return JNI_TRUE;
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_freerdp_freerdpcore_services_LibFreeRDP_freerdp_1is_1native_1touch_1supported(
+    JNIEnv* env, jclass cls, jlong instance)
+{
+	WINPR_UNUSED(env);
+	WINPR_UNUSED(cls);
+	freerdp* inst = (freerdp*)instance;
+
+	if (!inst || !inst->context)
+		return JNI_FALSE;
+
+	const androidContext* afc = (const androidContext*)inst->context;
+	/* The RDPEI channel context is only set once the dynamic virtual channel
+	 * has been negotiated with the remote, i.e. the remote supports MS-RDPEI. */
+	return (afc->common.rdpei != nullptr) ? JNI_TRUE : JNI_FALSE;
+}
+
 static jboolean android_push_clipboard_event(freerdp* inst, const void* data, size_t data_length,
                                              const char* mimeType)
 {

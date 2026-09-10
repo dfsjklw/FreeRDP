@@ -18,6 +18,7 @@ import android.graphics.Matrix;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.drawable.BitmapDrawable;
+import android.os.Build;
 import android.text.InputType;
 import android.util.AttributeSet;
 import android.util.Log;
@@ -33,9 +34,11 @@ import android.view.inputmethod.InputConnection;
 import androidx.annotation.NonNull;
 
 import com.freerdp.freerdpcore.application.SessionState;
+import com.freerdp.freerdpcore.services.LibFreeRDP;
 import com.freerdp.freerdpcore.utils.DoubleGestureDetector;
 import com.freerdp.freerdpcore.utils.GestureDetector;
 
+import java.util.Collections;
 import java.util.Stack;
 
 public class SessionView extends View
@@ -70,6 +73,9 @@ public class SessionView extends View
 
 	// private static final String TAG = "FreeRDP.SessionView";
 	private DoubleGestureDetector doubleGestureDetector;
+	private NativeTouchListener nativeTouchListener = null;
+	private boolean nativeTouchEnabled = false;
+
 	public SessionView(Context context)
 	{
 		super(context);
@@ -131,6 +137,28 @@ public class SessionView extends View
 	public void setSessionViewListener(SessionViewListener sessionViewListener)
 	{
 		this.sessionViewListener = sessionViewListener;
+	}
+
+	// Receives raw touch contacts when native (MS-RDPEI) touch forwarding is enabled.
+	public interface NativeTouchListener
+	{
+		void onNativeTouch(int flags, int contactId, float pressure, int x, int y);
+	}
+
+	public void setNativeTouchListener(NativeTouchListener listener)
+	{
+		nativeTouchListener = listener;
+	}
+
+	// While enabled every touch contact is forwarded as-is, mouse gesture handling is bypassed.
+	public void setNativeTouchEnabled(boolean enabled)
+	{
+		nativeTouchEnabled = enabled;
+	}
+
+	public boolean isNativeTouchEnabled()
+	{
+		return nativeTouchEnabled;
 	}
 
 	public void addInvalidRegion(Rect invalidRegion)
@@ -261,6 +289,19 @@ public class SessionView extends View
 		                          (int)(height * scaleFactor) + touchPointerPaddingHeight);
 	}
 
+	// Ask the system to keep its own gestures (three finger swipe, back swipe, ...) away from
+	// the session surface, otherwise they win over the touch contacts we forward.
+	@Override protected void onLayout(boolean changed, int left, int top, int right, int bottom)
+	{
+		super.onLayout(changed, left, top, right, bottom);
+
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
+		{
+			setSystemGestureExclusionRects(
+			    Collections.singletonList(new Rect(0, 0, getWidth(), getHeight())));
+		}
+	}
+
 	@Override public void onDraw(@NonNull Canvas canvas)
 	{
 		super.onDraw(canvas);
@@ -314,9 +355,76 @@ public class SessionView extends View
 			return true;
 		}
 
+		// Native (MS-RDPEI) touch input: forward the contacts as they are instead of
+		// emulating mouse gestures with them.
+		if (nativeTouchEnabled && nativeTouchListener != null)
+			return handleNativeTouchEvent(event);
+
 		boolean res = gestureDetector.onTouchEvent(event);
 		res |= doubleGestureDetector.onTouchEvent(event);
 		return res;
+	}
+
+	// Forwards one MotionEvent worth of contacts to the remote. Always consumes the event.
+	private boolean handleNativeTouchEvent(MotionEvent event)
+	{
+		// the remote desktop owns the gesture: keep the ScrollView out of the way
+		if (getParent() != null)
+			getParent().requestDisallowInterceptTouchEvent(true);
+
+		final int action = event.getActionMasked();
+		final int index = event.getActionIndex();
+
+		switch (action)
+		{
+			case MotionEvent.ACTION_DOWN:
+			case MotionEvent.ACTION_POINTER_DOWN:
+				sendNativeTouch(LibFreeRDP.TOUCH_FLAG_DOWN, event, index);
+				break;
+
+			case MotionEvent.ACTION_MOVE:
+				for (int i = 0; i < event.getPointerCount(); i++)
+					sendNativeTouch(LibFreeRDP.TOUCH_FLAG_MOTION, event, i);
+				break;
+
+			case MotionEvent.ACTION_UP:
+			case MotionEvent.ACTION_POINTER_UP:
+				sendNativeTouch(LibFreeRDP.TOUCH_FLAG_UP, event, index);
+				break;
+
+			case MotionEvent.ACTION_CANCEL:
+				for (int i = 0; i < event.getPointerCount(); i++)
+					sendNativeTouch(LibFreeRDP.TOUCH_FLAG_CANCEL, event, i);
+				if (getParent() != null)
+					getParent().requestDisallowInterceptTouchEvent(false);
+				break;
+
+			default:
+				break;
+		}
+
+		return true;
+	}
+
+	// Maps a single contact into session coordinates and hands it to the listener.
+	private void sendNativeTouch(int flags, MotionEvent event, int index)
+	{
+		final float[] coordinates = { event.getX(index), event.getY(index) };
+		invScaleMatrix.mapPoints(coordinates);
+		int x = (int)coordinates[0];
+		int y = (int)coordinates[1];
+		if (x < 0)
+			x = 0;
+		else if (x > width)
+			x = width;
+		if (y < 0)
+			y = 0;
+		else if (y > height)
+			y = height;
+
+		// FreeRDP reserves contact id 0 for "no contact", so shift the Android pointer id
+		nativeTouchListener.onNativeTouch(flags, event.getPointerId(index) + 1,
+		                                  event.getPressure(index), x, y);
 	}
 
 	// Handle all physical mouse buttons here; finger taps come via onSingleTapUp.

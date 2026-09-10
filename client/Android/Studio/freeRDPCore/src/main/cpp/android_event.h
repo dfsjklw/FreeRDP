@@ -19,6 +19,7 @@
 #define EVENT_TYPE_DISCONNECT 3
 #define EVENT_TYPE_KEY_UNICODE 4
 #define EVENT_TYPE_CLIPBOARD 5
+#define EVENT_TYPE_TOUCH 6
 
 typedef struct
 {
@@ -48,6 +49,17 @@ typedef struct
 	char* mimeType;
 } ANDROID_EVENT_CLIPBOARD;
 
+/* Native (RDPEI / MS-RDPINPUT) touch contact event. */
+typedef struct
+{
+	int type;
+	UINT32 flags;      /* FREERDP_TOUCH_* */
+	INT32 contactId;   /* finger id, stable for the lifetime of the contact */
+	UINT32 pressure;   /* only used if FREERDP_TOUCH_HAS_PRESSURE is set */
+	INT32 x;
+	INT32 y;
+} ANDROID_EVENT_TOUCH;
+
 typedef struct
 {
 	int size;
@@ -65,6 +77,8 @@ FREERDP_LOCAL ANDROID_EVENT_KEY* android_event_key_new(int flags, UINT16 scancod
 FREERDP_LOCAL ANDROID_EVENT_KEY* android_event_unicodekey_new(UINT16 flags, UINT16 key);
 FREERDP_LOCAL ANDROID_EVENT_CURSOR* android_event_cursor_new(UINT16 flags, UINT16 x, UINT16 y);
 FREERDP_LOCAL ANDROID_EVENT* android_event_disconnect_new(void);
+FREERDP_LOCAL ANDROID_EVENT_TOUCH* android_event_touch_new(UINT32 flags, INT32 contactId,
+                                                           UINT32 pressure, INT32 x, INT32 y);
 FREERDP_LOCAL ANDROID_EVENT_CLIPBOARD*
 android_event_clipboard_new(const void* data, size_t data_length, const char* mimeType);
 

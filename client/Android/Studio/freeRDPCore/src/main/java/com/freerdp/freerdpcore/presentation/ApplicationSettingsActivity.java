@@ -314,6 +314,15 @@ public class ApplicationSettingsActivity
 		    context.getString(R.string.preference_key_ui_auto_scroll_touchpointer), false);
 	}
 
+	// True if raw multi-touch contacts should be forwarded to the remote (MS-RDPEI)
+	// instead of being translated into mouse gestures.
+	public static boolean getNativeTouch(Context context)
+	{
+		SharedPreferences preferences = get(context);
+		return preferences.getBoolean(context.getString(R.string.preference_key_ui_native_touch),
+		                              false);
+	}
+
 	public static String getClientName(Context context)
 	{
 		SharedPreferences preferences = get(context);

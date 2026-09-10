@@ -16,6 +16,7 @@
 
 #include <freerdp/freerdp.h>
 #include <freerdp/log.h>
+#include <freerdp/client.h>
 
 #define TAG CLIENT_TAG("android")
 
@@ -142,15 +143,38 @@ static BOOL android_process_event(ANDROID_EVENT_QUEUE* queue, freerdp* inst)
 			}
 			break;
 
+			case EVENT_TYPE_TOUCH:
+			{
+				ANDROID_EVENT_TOUCH* touch_event = (ANDROID_EVENT_TOUCH*)event;
+
+				/* freerdp_client_handle_touch() forwards the contact through the
+				 * RDPEI (MS-RDPINPUT) channel and falls back to mouse emulation
+				 * when the remote does not support native touch input. */
+				rc = freerdp_client_handle_touch(&afc->common, touch_event->flags,
+				                                 touch_event->contactId, touch_event->pressure,
+				                                 touch_event->x, touch_event->y);
+			}
+			break;
+
 			case EVENT_TYPE_DISCONNECT:
 			default:
 				break;
 		}
 
+		const BOOL isTouch = (event->type == EVENT_TYPE_TOUCH);
 		android_event_free(event);
 
 		if (!rc)
+		{
+			/* A failing touch event (e.g. contact bookkeeping mismatch) must never tear
+			 * down the session, drop it instead. */
+			if (isTouch)
+			{
+				WLog_WARN(TAG, "Failed to handle touch event, dropping it");
+				continue;
+			}
 			return FALSE;
+		}
 	}
 
 	return TRUE;
@@ -248,6 +272,28 @@ ANDROID_EVENT_CURSOR* android_event_cursor_new(UINT16 flags, UINT16 x, UINT16 y)
 }
 
 static void android_event_cursor_free(ANDROID_EVENT_CURSOR* event)
+{
+	free(event);
+}
+
+ANDROID_EVENT_TOUCH* android_event_touch_new(UINT32 flags, INT32 contactId, UINT32 pressure,
+                                             INT32 x, INT32 y)
+{
+	ANDROID_EVENT_TOUCH* event = (ANDROID_EVENT_TOUCH*)calloc(1, sizeof(ANDROID_EVENT_TOUCH));
+
+	if (!event)
+		return nullptr;
+
+	event->type = EVENT_TYPE_TOUCH;
+	event->flags = flags;
+	event->contactId = contactId;
+	event->pressure = pressure;
+	event->x = x;
+	event->y = y;
+	return event;
+}
+
+static void android_event_touch_free(ANDROID_EVENT_TOUCH* event)
 {
 	free(event);
 }
@@ -409,6 +455,10 @@ void android_event_free(ANDROID_EVENT* event)
 
 		case EVENT_TYPE_CLIPBOARD:
 			android_event_clipboard_free((ANDROID_EVENT_CLIPBOARD*)event);
+			break;
+
+		case EVENT_TYPE_TOUCH:
+			android_event_touch_free((ANDROID_EVENT_TOUCH*)event);
 			break;
 
 		default:

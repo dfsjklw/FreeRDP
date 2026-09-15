@@ -23,6 +23,11 @@ ExternalProject_Add(
   GIT_REPOSITORY https://github.com/cisco/openh264.git
   GIT_TAG ${OPENH264_TAG}
   GIT_SHALLOW TRUE
+  # The git update step of this project never writes its stamp file, which keeps openh264 - and
+  # every project depending on it (ffmpeg, freerdp) - dirty on each build, so the complete external
+  # tree was rebuilt even when nothing changed. The tag is pinned, so no fetch is needed: make the
+  # step a plain no-op so its stamp is created like it is for the other external projects.
+  UPDATE_COMMAND ""
   LIST_SEPARATOR |
   PATCH_COMMAND git apply --3way ${CMAKE_CURRENT_LIST_DIR}/0001-riscv64-support.patch
                 ${CMAKE_CURRENT_LIST_DIR}/0002-openh264-pkgconfig-patch.patch

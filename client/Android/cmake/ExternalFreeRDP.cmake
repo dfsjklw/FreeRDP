@@ -52,6 +52,11 @@ ExternalProject_Add(
   LIST_SEPARATOR |
   CMAKE_ARGS ${ANDROID_CMAKE_ARGS} -DCMAKE_PREFIX_PATH:PATH=${FREERDP_PREFIX_PATH} ${FREERDP_EXTRA_CMAKE_ARGS}
   DEPENDS ${ANDROID_NATIVE_DEPS}
+  # The FreeRDP sources live in this repository, so the build+install steps must run on every build:
+  # an ExternalProject stamp does not track its SOURCE_DIR, and skipping the step would silently
+  # ship a stale libfreerdp3.so. The inner ninja/make does the real change detection, so an
+  # unchanged tree only costs a few seconds.
+  BUILD_ALWAYS TRUE
   # Tell Ninja these files are produced by this ExternalProject so it
   # doesn't complain about missing inputs when linking freerdp-android.so
   BUILD_BYPRODUCTS

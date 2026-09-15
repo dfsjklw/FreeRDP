@@ -73,6 +73,26 @@ below. They live in the Android client unless stated otherwise.
   by a critical section, the wake up event is reset only once the queue is drained,
   and pending events are freed on shutdown instead of leaking.
 
+### Build speed
+
+* The Android build no longer rebuilds the whole external tree on every invocation. The `openh264`
+  ExternalProject never wrote the stamp file of its git update step, which kept openh264 - and
+  everything depending on it (`ffmpeg`, `freerdp`) - dirty, so every build re-ran the complete
+  external build (`ninja -d explain` reported
+  `output .../openh264-stamp/openh264-update doesn't exist`). The tag is pinned, so that step is
+  now a no-op which creates its stamp like the other external projects do.
+* The `freerdp` ExternalProject builds always (`BUILD_ALWAYS TRUE`). An ExternalProject stamp only
+  tracks its own steps, not the sources below `SOURCE_DIR`: with a stable stamp a modified
+  `libfreerdp`/`winpr` file would have been left uncompiled and a stale `libfreerdp3.so` shipped.
+  The inner ninja/make now does the real change detection, which costs a few seconds when nothing
+  changed.
+* Measured on the build machine (24 threads): an unchanged tree went from 218 s to 1-3 s, and
+  changing one C file from 240 s to 2-3 s. Verified with a `#error` probe - injecting one into
+  `libfreerdp/codec/h264.c` fails the build again, so sources are still recompiled.
+* `org.gradle.jvmargs` raised from 4 GB to 8 GB (the build machine has 23 GB), and the build script
+  keeps the Gradle daemon alive between builds instead of stopping it (`gradle --stop` before every
+  build cost about 60 s).
+
 The Android client is built from `client/Android/Studio` (`gradle assembleDebug`
 produces `aFreeRDP-arm64-v8a-debug.apk`, install with `adb install -r -t`).
 

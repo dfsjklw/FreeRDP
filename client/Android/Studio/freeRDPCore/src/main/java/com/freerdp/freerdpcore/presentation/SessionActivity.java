@@ -285,6 +285,10 @@ public class SessionActivity extends AppCompatActivity
 			{
 				disconnectSession();
 			}
+			@Override public void onQuality()
+			{
+				showQualityDialog();
+			}
 		});
 
 		ExtendedKeyboardView keyboard = findViewById(R.id.extended_keyboard);
@@ -688,6 +692,62 @@ public class SessionActivity extends AppCompatActivity
 
 		connectThread = new ConnectThread(getApplicationContext(), session);
 		connectThread.start();
+	}
+
+
+	// Lets the user pick a quality/bandwidth profile for the running session. The choice is
+	// written into the bookmark and takes effect on the next connect.
+	private void showQualityDialog()
+	{
+		final BookmarkBase bookmark = (session != null) ? session.getBookmark() : null;
+		if (bookmark == null)
+			return;
+
+		final String[] labels = { getString(R.string.quality_low), getString(R.string.quality_balanced),
+			                      getString(R.string.quality_high) };
+
+		new android.app.AlertDialog.Builder(this)
+		    .setTitle(R.string.quality_title)
+		    .setItems(labels,
+		              (dialog, which) -> applyQualityProfile(bookmark, which, labels[which]))
+		    .show();
+	}
+
+	private void applyQualityProfile(BookmarkBase bookmark, int level, String label)
+	{
+		final BookmarkBase.PerformanceFlags flags = bookmark.getActivePerformanceFlags();
+
+		// 0 = bandwidth saver, 1 = balanced, 2 = best quality
+		flags.setNetworkType((level == 0) ? "broadband-low" : ((level == 2) ? "lan" : "auto"));
+		flags.setRemoteFX(level == 2);
+		flags.setGfx(true);
+		flags.setH264(level != 0);
+		flags.setGfxProgressive(level != 1);
+		flags.setVideoOptimized(level != 1);
+		flags.setWallpaper(level == 2);
+		flags.setTheming(level == 2);
+		flags.setFullWindowDrag(level == 2);
+		flags.setMenuAnimations(level == 2);
+		flags.setFontSmoothing(level == 2);
+		flags.setDesktopComposition(level == 2);
+
+		// Room refuses main thread access, so persist on a worker thread
+		final BookmarkBase target = bookmark;
+		new Thread(() -> {
+			try
+			{
+				new com.freerdp.freerdpcore.services.ManualBookmarkGateway(
+				    com.freerdp.freerdpcore.data.AppDatabase.getInstance(getApplicationContext())
+				        .bookmarkDao())
+				    .update(target);
+			}
+			catch (Exception e)
+			{
+				Log.e(TAG, "failed to store the quality profile", e);
+			}
+		}, "quality-profile-store").start();
+
+		Toast.makeText(this, getString(R.string.quality_applied, label), Toast.LENGTH_LONG).show();
 	}
 
 	// binds the current session to the activity by wiring it up with the

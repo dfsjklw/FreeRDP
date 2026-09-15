@@ -52,6 +52,15 @@
             app:tint="#FFFFFF"
             android:src="@drawable/ic_close" />
 
+        <ImageButton
+            android:id="@+id/floating_toolbar_quality"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:background="?android:attr/selectableItemBackground"
+            android:contentDescription="@string/menu_quality"
+            app:tint="#FFFFFF"
+            android:src="@drawable/ic_tune" />
+
     </LinearLayout>
 
 </LinearLayout>

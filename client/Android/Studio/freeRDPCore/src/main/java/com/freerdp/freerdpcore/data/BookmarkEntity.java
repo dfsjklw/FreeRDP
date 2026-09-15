@@ -68,6 +68,16 @@ import androidx.room.PrimaryKey;
 	@ColumnInfo(name = "perf_desktop_composition", defaultValue = "true")
 	public boolean perfDesktopComposition = true;
 
+	@NonNull
+	@ColumnInfo(name = "perf_network", defaultValue = "auto")
+	public String perfNetwork = "auto";
+
+	@ColumnInfo(name = "perf_gfx_progressive", defaultValue = "false")
+	public boolean perfGfxProgressive = false;
+
+	@ColumnInfo(name = "perf_video", defaultValue = "false")
+	public boolean perfVideo = false;
+
 	@ColumnInfo(name = "enable_gateway_settings", defaultValue = "false")
 	public boolean enableGatewaySettings = false;
 

@@ -20,6 +20,12 @@
     <string name="menu_ext_keyboard">功能键</string>
     <string name="menu_touch_pointer">触摸指针</string>
     <string name="menu_disconnect">断开连接</string>
+    <string name="menu_quality">画质</string>
+    <string name="quality_title">画质档位</string>
+    <string name="quality_low">省带宽</string>
+    <string name="quality_balanced">均衡</string>
+    <string name="quality_high">高画质</string>
+    <string name="quality_applied">已切换为%1$s，重新连接后生效</string>
     <string name="session_pan_handle">拖动以平移画面</string>
     <!-- List section headers -->
     <!-- Search strings -->
@@ -75,6 +81,17 @@
     <string name="settings_perf_full_window_drag">拖动时窗口内容</string>
     <string name="settings_perf_menu_animation">菜单动画</string>
     <string name="settings_perf_theming">视觉样式</string>
+    <string name="settings_perf_network">网络类型</string>
+    <string name="settings_perf_gfx_progressive">渐进式编解码</string>
+    <string name="settings_perf_video">视频优化</string>
+    <string-array name="perf_network_entries">
+        <item>自动检测</item>
+        <item>调制解调器 (56 kbps)</item>
+        <item>宽带 (低)</item>
+        <item>宽带 (高)</item>
+        <item>广域网 (WAN)</item>
+        <item>局域网 (LAN)</item>
+    </string-array>
     <string name="settings_advanced">高级</string>
     <string name="settings_cat_gateway">网关</string>
     <string name="settings_enable_gateway_settings">启用网关</string>

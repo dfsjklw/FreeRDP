@@ -47,6 +47,9 @@ public final class BookmarkConverter
 		perf.setMenuAnimations(e.perfMenuAnimations);
 		perf.setFontSmoothing(e.perfFontSmoothing);
 		perf.setDesktopComposition(e.perfDesktopComposition);
+		perf.setNetworkType(e.perfNetwork);
+		perf.setGfxProgressive(e.perfGfxProgressive);
+		perf.setVideoOptimized(e.perfVideo);
 
 		BookmarkBase.AdvancedSettings adv = bm.getAdvancedSettings();
 		adv.setLoadBalanceInfo(e.loadbalanceinfo);
@@ -114,6 +117,9 @@ public final class BookmarkConverter
 		e.perfMenuAnimations = perf.getMenuAnimations();
 		e.perfFontSmoothing = perf.getFontSmoothing();
 		e.perfDesktopComposition = perf.getDesktopComposition();
+		e.perfNetwork = perf.getNetworkType();
+		e.perfGfxProgressive = perf.getGfxProgressive();
+		e.perfVideo = perf.getVideoOptimized();
 
 		BookmarkBase.AdvancedSettings adv = bm.getAdvancedSettings();
 		e.loadbalanceinfo = adv.getLoadBalanceInfo();

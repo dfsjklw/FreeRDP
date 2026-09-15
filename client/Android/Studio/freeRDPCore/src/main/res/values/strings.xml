@@ -24,6 +24,12 @@
     <string name="menu_ext_keyboard">Function Keys</string>
     <string name="menu_touch_pointer">Touch Pointer</string>
     <string name="menu_disconnect">Disconnect</string>
+    <string name="menu_quality">Quality</string>
+    <string name="quality_title">Quality profile</string>
+    <string name="quality_low">Bandwidth saver</string>
+    <string name="quality_balanced">Balanced</string>
+    <string name="quality_high">Best quality</string>
+    <string name="quality_applied">%1$s applied, reconnect to take effect</string>
     <string name="kbd_win_key">Windows key</string>
     <!-- List section headers -->
     <!-- Search strings -->
@@ -130,6 +136,25 @@
     <string name="settings_perf_full_window_drag">Window contents while dragging</string>
     <string name="settings_perf_menu_animation">Menu Animation</string>
     <string name="settings_perf_theming">Visual Styles</string>
+    <string name="settings_perf_network">Network Type</string>
+    <string name="settings_perf_gfx_progressive">Progressive Codec</string>
+    <string name="settings_perf_video">Video Optimized</string>
+    <string-array name="perf_network_entries">
+        <item>Auto detect</item>
+        <item>Modem (56 kbps)</item>
+        <item>Broadband (low)</item>
+        <item>Broadband (high)</item>
+        <item>WAN</item>
+        <item>LAN</item>
+    </string-array>
+    <string-array name="perf_network_values" translatable="false">
+        <item>auto</item>
+        <item>modem</item>
+        <item>broadband-low</item>
+        <item>broadband-high</item>
+        <item>wan</item>
+        <item>lan</item>
+    </string-array>
     <string name="settings_advanced">Advanced</string>
     <string name="settings_tlsSecLevel">TLS Security Level</string>
     <string name="settings_tlsMinLevel">Required TLS Version</string>

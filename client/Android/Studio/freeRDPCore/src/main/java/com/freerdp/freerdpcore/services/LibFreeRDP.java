@@ -382,22 +382,40 @@ public class LibFreeRDP
 		}
 
 		BookmarkBase.PerformanceFlags flags = bookmark.getActivePerformanceFlags();
+
+		// bandwidth: use the configured link type, otherwise let the client detect it
+		final String networkType = flags.getNetworkType();
+		final String network =
+		    (networkType == null || networkType.isEmpty()) ? "auto" : networkType;
+
 		if (flags.getRemoteFX())
 		{
 			args.add("/rfx");
-			args.add("/network:auto");
+			args.add("/network:" + network);
 		}
 
 		if (flags.getGfx())
 		{
 			args.add("/gfx");
-			args.add("/network:auto");
+			args.add("/network:" + network);
 		}
 
 		if (flags.getH264() && mHasH264)
 		{
-			args.add("/gfx:AVC444");
-			args.add("/network:auto");
+			args.add(flags.getGfxProgressive() ? "/gfx:AVC444,progressive" : "/gfx:AVC444");
+			args.add("/network:" + network);
+		}
+		else if (flags.getGfx() && flags.getGfxProgressive())
+		{
+			// progressive codec is a sub option of the gfx pipeline
+			args.add("/gfx:progressive");
+			args.add("/network:" + network);
+		}
+
+		if (flags.getVideoOptimized())
+		{
+			// dedicated channel for video content (MS-RDPEVOR)
+			args.add("/video");
 		}
 
 		args.add(addFlag("wallpaper", flags.getWallpaper()));

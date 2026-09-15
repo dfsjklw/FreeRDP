@@ -20,6 +20,12 @@
     <string name="menu_ext_keyboard">功能鍵</string>
     <string name="menu_touch_pointer">觸控指標</string>
     <string name="menu_disconnect">中斷連線</string>
+    <string name="menu_quality">畫質</string>
+    <string name="quality_title">畫質設定</string>
+    <string name="quality_low">節省頻寬</string>
+    <string name="quality_balanced">均衡</string>
+    <string name="quality_high">高畫質</string>
+    <string name="quality_applied">已切換為%1$s，重新連線後生效</string>
     <string name="session_pan_handle">拖曳以平移畫面</string>
     <!-- List section headers -->
     <!-- Search strings -->
@@ -73,6 +79,17 @@
     <string name="settings_perf_full_window_drag">拖曳時顯示視窗內容</string>
     <string name="settings_perf_menu_animation">功能表及視窗動畫</string>
     <string name="settings_perf_theming">視覺樣式</string>
+    <string name="settings_perf_network">網路類型</string>
+    <string name="settings_perf_gfx_progressive">漸進式編解碼</string>
+    <string name="settings_perf_video">視訊最佳化</string>
+    <string-array name="perf_network_entries">
+        <item>自動偵測</item>
+        <item>數據機 (56 kbps)</item>
+        <item>寬頻 (低)</item>
+        <item>寬頻 (高)</item>
+        <item>廣域網路 (WAN)</item>
+        <item>區域網路 (LAN)</item>
+    </string-array>
     <string name="settings_advanced">進階</string>
     <string name="settings_cat_gateway">閘道</string>
     <string name="settings_enable_gateway_settings">啟用閘道伺服器</string>

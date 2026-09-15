@@ -39,5 +39,18 @@
         <CheckBoxPreference
             android:key="bookmark.perf_themes"
             android:title="@string/settings_perf_theming" />
+        <ListPreference
+            android:entries="@array/perf_network_entries"
+            android:entryValues="@array/perf_network_values"
+            android:key="bookmark.perf_network"
+            android:title="@string/settings_perf_network"
+            app:useSimpleSummaryProvider="true" />
+        <CheckBoxPreference
+            android:dependency="bookmark.perf_gfx"
+            android:key="bookmark.perf_gfx_progressive"
+            android:title="@string/settings_perf_gfx_progressive" />
+        <CheckBoxPreference
+            android:key="bookmark.perf_video"
+            android:title="@string/settings_perf_video" />
     </PreferenceCategory>
 </PreferenceScreen>

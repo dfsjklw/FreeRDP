@@ -33,7 +33,7 @@ import net.zetetic.database.sqlcipher.SupportOpenHelperFactory;
           exportSchema = false)
 public abstract class AppDatabase extends RoomDatabase
 {
-	static final int DB_VERSION = 18;
+	static final int DB_VERSION = 19;
 	private static final String DB_NAME = "bookmarks.db";
 
 	static
@@ -67,6 +67,7 @@ public abstract class AppDatabase extends RoomDatabase
 					               .addMigrations(MIGRATION_15_16)
 					               .addMigrations(MIGRATION_16_17)
 					               .addMigrations(MIGRATION_17_18)
+					               .addMigrations(MIGRATION_18_19)
 					               .build();
 				}
 			}
@@ -172,6 +173,16 @@ public abstract class AppDatabase extends RoomDatabase
 			sb.append(String.format(java.util.Locale.US, "%02x", b));
 		return sb.toString();
 	}
+
+	private static final Migration MIGRATION_18_19 = new Migration(18, 19) {
+		@Override public void migrate(@NonNull SupportSQLiteDatabase db)
+		{
+			db.execSQL("ALTER TABLE 'bookmarks' ADD 'perf_network' TEXT NOT NULL DEFAULT 'auto';");
+			db.execSQL(
+			    "ALTER TABLE 'bookmarks' ADD 'perf_gfx_progressive' INTEGER NOT NULL DEFAULT false;");
+			db.execSQL("ALTER TABLE 'bookmarks' ADD 'perf_video' INTEGER NOT NULL DEFAULT false;");
+		}
+	};
 
 	private static final Migration MIGRATION_17_18 = new Migration(17, 18) {
 		@Override public void migrate(@NonNull SupportSQLiteDatabase db)

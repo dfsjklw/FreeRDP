@@ -43,6 +43,9 @@ public class BookmarkBase implements Parcelable, Cloneable
 	private static final String keyFlagWindowDrag = "bookmark.perf_window_dragging";
 	private static final String keyFlagMenuAnim = "bookmark.perf_menu_animation";
 	private static final String keyFlagTheming = "bookmark.perf_themes";
+	private static final String keyPerfNetwork = "bookmark.perf_network";
+	private static final String keyPerfProgressive = "bookmark.perf_gfx_progressive";
+	private static final String keyPerfVideo = "bookmark.perf_video";
 
 	private static final String keyTlsSecLevel = "bookmark.tlsSecLevel";
 	private static final String keyTlsMinLevel = "bookmark.tlsMinLevel";
@@ -333,6 +336,9 @@ public class BookmarkBase implements Parcelable, Cloneable
 		editor.putBoolean(keyFlagWindowDrag, performanceFlags.getFullWindowDrag());
 		editor.putBoolean(keyFlagMenuAnim, performanceFlags.getMenuAnimations());
 		editor.putBoolean(keyFlagTheming, performanceFlags.getTheming());
+		editor.putString(keyPerfNetwork, performanceFlags.getNetworkType());
+		editor.putBoolean(keyPerfProgressive, performanceFlags.getGfxProgressive());
+		editor.putBoolean(keyPerfVideo, performanceFlags.getVideoOptimized());
 
 		editor.putInt(keyTlsSecLevel, advancedSettings.tlsSecLevel);
 		editor.putInt(keyTlsMinLevel, advancedSettings.tlsMinLevel);
@@ -392,6 +398,9 @@ public class BookmarkBase implements Parcelable, Cloneable
 		performanceFlags.setFullWindowDrag(sharedPrefs.getBoolean(keyFlagWindowDrag, false));
 		performanceFlags.setMenuAnimations(sharedPrefs.getBoolean(keyFlagMenuAnim, false));
 		performanceFlags.setTheming(sharedPrefs.getBoolean(keyFlagTheming, false));
+		performanceFlags.setNetworkType(sharedPrefs.getString(keyPerfNetwork, "auto"));
+		performanceFlags.setGfxProgressive(sharedPrefs.getBoolean(keyPerfProgressive, false));
+		performanceFlags.setVideoOptimized(sharedPrefs.getBoolean(keyPerfVideo, false));
 
 		advancedSettings.setTlsSecLevel(sharedPrefs.getInt(keyTlsSecLevel, -1));
 		advancedSettings.setTlsMinLevel(sharedPrefs.getInt(keyTlsMinLevel, -1));
@@ -453,6 +462,10 @@ public class BookmarkBase implements Parcelable, Cloneable
 		private boolean menuAnimations = true;
 		private boolean fontSmoothing = true;
 		private boolean desktopComposition = true;
+		// bandwidth related options
+		private String networkType = "auto";
+		private boolean gfxProgressive = false;
+		private boolean videoOptimized = false;
 
 		public PerformanceFlags()
 		{
@@ -469,6 +482,9 @@ public class BookmarkBase implements Parcelable, Cloneable
 			menuAnimations = parcel.readBoolean();
 			fontSmoothing = parcel.readBoolean();
 			desktopComposition = parcel.readBoolean();
+			networkType = parcel.readString();
+			gfxProgressive = parcel.readBoolean();
+			videoOptimized = parcel.readBoolean();
 		}
 
 		public boolean getRemoteFX()
@@ -561,6 +577,37 @@ public class BookmarkBase implements Parcelable, Cloneable
 			this.desktopComposition = desktopComposition;
 		}
 
+		// bandwidth related accessors
+		public String getNetworkType()
+		{
+			return networkType;
+		}
+
+		public void setNetworkType(String networkType)
+		{
+			this.networkType = (networkType != null) ? networkType : "auto";
+		}
+
+		public boolean getGfxProgressive()
+		{
+			return gfxProgressive;
+		}
+
+		public void setGfxProgressive(boolean gfxProgressive)
+		{
+			this.gfxProgressive = gfxProgressive;
+		}
+
+		public boolean getVideoOptimized()
+		{
+			return videoOptimized;
+		}
+
+		public void setVideoOptimized(boolean videoOptimized)
+		{
+			this.videoOptimized = videoOptimized;
+		}
+
 		@Override public int describeContents()
 		{
 			return 0;
@@ -577,6 +624,9 @@ public class BookmarkBase implements Parcelable, Cloneable
 			out.writeBoolean(menuAnimations);
 			out.writeBoolean(fontSmoothing);
 			out.writeBoolean(desktopComposition);
+			out.writeString(networkType);
+			out.writeBoolean(gfxProgressive);
+			out.writeBoolean(videoOptimized);
 		}
 	}
 

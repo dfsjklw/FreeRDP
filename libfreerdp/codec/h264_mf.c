@@ -191,8 +191,7 @@ static UINT32 getSrcOffset(H264_CONTEXT_MF* sys, UINT32 line, BOOL isUV)
 	offset *= sys->stride;
 	if (isUV)
 		offset /= 2u;
-	return WINPR_ASSERTING_INT_CAST(UINT32, line);
-}
+	return WINPR_ASSERTING_INT_CAST(UINT32, offset);
 }
 
 static int mf_decompress(H264_CONTEXT* WINPR_RESTRICT h264, const BYTE* WINPR_RESTRICT pSrcData,
@@ -396,15 +395,15 @@ static int mf_decompress(H264_CONTEXT* WINPR_RESTRICT h264, const BYTE* WINPR_RE
 		 */
 		for (UINT32 x = 0; x < sys->frameHeight; x++)
 		{
-			const srcOffset = getSrcOffset(sys, x, FALSE);
-			const dstOffset = iStride[0] * x;
+			const UINT32 srcOffset = getSrcOffset(sys, x, FALSE);
+			const UINT32 dstOffset = (UINT32)iStride[0] * x;
 			CopyMemory(&pYUVData[0][dstOffset], &buffer[srcOffset], sys->stride);
 		}
 		for (UINT32 x = 0; x < sys->frameHeight / 2; x++)
 		{
-			const srcOffset = getSrcOffset(sys, x, TRUE);
-			const dstUOffset = iStride[1] * x;
-			const dstVOffset = iStride[2] * x;
+			const UINT32 srcOffset = getSrcOffset(sys, x, TRUE);
+			const UINT32 dstUOffset = (UINT32)iStride[1] * x;
+			const UINT32 dstVOffset = (UINT32)iStride[2] * x;
 			CopyMemory(&pYUVData[1][dstUOffset], &buffer[srcOffset], sys->stride / 2u);
 			CopyMemory(&pYUVData[2][dstVOffset], &buffer[srcOffset], sys->stride / 2u);
 		}
@@ -425,7 +424,7 @@ static int mf_decompress(H264_CONTEXT* WINPR_RESTRICT h264, const BYTE* WINPR_RE
 	inputSample->lpVtbl->Release(inputSample);
 	return 1;
 error:
-	(void)fprintf(stderr, "mf_decompress error\n");
+	WLog_Print(h264->log, WLOG_ERROR, "decompression failed");
 	return -1;
 }
 
@@ -434,7 +433,8 @@ static int mf_compress(H264_CONTEXT* WINPR_RESTRICT h264, const BYTE** WINPR_RES
                        UINT32* WINPR_RESTRICT pDstSize)
 {
 	H264_CONTEXT_MF* sys = (H264_CONTEXT_MF*)h264->pSystemData;
-	return 1;
+	WLog_Print(h264->log, WLOG_ERROR, "TODO: compression not implemented");
+	return -1;
 }
 
 static BOOL mf_plat_loaded(H264_CONTEXT_MF* sys)

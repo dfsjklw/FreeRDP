@@ -31,6 +31,8 @@
     <string name="quality_high">Best quality</string>
     <string name="quality_applied">%1$s applied, reconnect to take effect</string>
     <string name="kbd_win_key">Windows key</string>
+    <string name="tp_hscroll">Horizontal scroll</string>
+    <string name="tp_middle_click">Middle click</string>
     <!-- List section headers -->
     <!-- Search strings -->
     <string name="quick_connect_to">Connect to: %s</string>

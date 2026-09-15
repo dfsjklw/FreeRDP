@@ -13,6 +13,7 @@
 #define FREERDP_CLIENT_ANDROID_EVENT_H
 #include <freerdp/freerdp.h>
 #include <freerdp/api.h>
+#include <winpr/synch.h>
 
 #define EVENT_TYPE_KEY 1
 #define EVENT_TYPE_CURSOR 2
@@ -66,6 +67,11 @@ typedef struct
 	int count;
 	HANDLE isSet;
 	ANDROID_EVENT** events;
+	/* Serialises size/count/events: contacts are pushed from the JNI (UI) thread while the
+	 * RDP thread pops and frees them. Without this the two sides race and the same event
+	 * can end up in two slots, which makes it be freed twice (SIGABRT in scudo). */
+	CRITICAL_SECTION lock;
+	BOOL lockInitialized;
 } ANDROID_EVENT_QUEUE;
 
 FREERDP_LOCAL BOOL android_push_event(freerdp* inst, ANDROID_EVENT* event);

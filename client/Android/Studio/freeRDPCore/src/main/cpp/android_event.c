@@ -27,56 +27,70 @@ BOOL android_push_event(freerdp* inst, ANDROID_EVENT* event)
 {
 	androidContext* aCtx = (androidContext*)inst->context;
 
-	if (aCtx->event_queue->count >= aCtx->event_queue->size)
+	WINPR_ASSERT(aCtx);
+	WINPR_ASSERT(event);
+
+	ANDROID_EVENT_QUEUE* queue = aCtx->event_queue;
+
+	WINPR_ASSERT(queue);
+	WINPR_ASSERT(queue->lockInitialized);
+
+	BOOL rc = FALSE;
+
+	/* The RDP thread pops from the same queue, so the capacity check, the reallocation and
+	 * the append must all happen under the lock. */
+	EnterCriticalSection(&queue->lock);
+
+	if (queue->count >= queue->size)
 	{
-		size_t new_size = aCtx->event_queue->size;
+		size_t new_size = queue->size;
 		do
 		{
 			if (new_size >= SIZE_MAX - 128ull)
-				return FALSE;
+				goto out;
 
 			new_size += 128ull;
-		} while (new_size <= aCtx->event_queue->count);
-		void* new_events =
-		    realloc((void*)aCtx->event_queue->events, sizeof(ANDROID_EVENT*) * new_size);
+		} while (new_size <= (size_t)queue->count);
+
+		void* new_events = realloc((void*)queue->events, sizeof(ANDROID_EVENT*) * new_size);
 
 		if (!new_events)
-			return FALSE;
+			goto out;
 
-		aCtx->event_queue->events = new_events;
-		aCtx->event_queue->size = new_size;
+		queue->events = (ANDROID_EVENT**)new_events;
+		queue->size = new_size;
 	}
 
-	aCtx->event_queue->events[(aCtx->event_queue->count)++] = event;
-	return SetEvent(aCtx->event_queue->isSet);
-}
+	queue->events[(queue->count)++] = event;
+	rc = SetEvent(queue->isSet);
 
-static ANDROID_EVENT* android_peek_event(ANDROID_EVENT_QUEUE* queue)
-{
-	ANDROID_EVENT* event;
-
-	if (queue->count < 1)
-		return nullptr;
-
-	event = queue->events[0];
-	return event;
+out:
+	LeaveCriticalSection(&queue->lock);
+	return rc;
 }
 
 static ANDROID_EVENT* android_pop_event(ANDROID_EVENT_QUEUE* queue)
 {
-	ANDROID_EVENT* event;
+	ANDROID_EVENT* event = nullptr;
+
+	WINPR_ASSERT(queue);
+	WINPR_ASSERT(queue->lockInitialized);
+
+	EnterCriticalSection(&queue->lock);
 
 	if (queue->count < 1)
-		return nullptr;
+		goto out;
 
 	event = queue->events[0];
 	(queue->count)--;
 
-	for (size_t i = 0; i < queue->count; i++)
+	for (size_t i = 0; i < (size_t)queue->count; i++)
 	{
 		queue->events[i] = queue->events[i + 1];
 	}
 
+out:
+	LeaveCriticalSection(&queue->lock);
 	return event;
 }
 
@@ -90,13 +104,23 @@ static BOOL android_process_event(ANDROID_EVENT_QUEUE* queue, freerdp* inst)
 	context = inst->context;
 	WINPR_ASSERT(context);
 
-	while (android_peek_event(queue))
+	while (true)
 	{
 		BOOL rc = FALSE;
 		androidContext* afc = (androidContext*)context;
 		ANDROID_EVENT* event = android_pop_event(queue);
 
-		WINPR_ASSERT(event);
+		if (!event)
+		{
+			/* Queue drained: clear the wake up signal. A push racing with us either
+			 * happened before this check (queue not empty, signal stays set) or sets the
+			 * event again afterwards, so no contact can get stranded. */
+			EnterCriticalSection(&queue->lock);
+			if (queue->count == 0)
+				(void)ResetEvent(queue->isSet);
+			LeaveCriticalSection(&queue->lock);
+			break;
+		}
 
 		switch (event->type)
 		{
@@ -209,9 +233,8 @@ BOOL android_check_handle(freerdp* inst)
 
 	if (WaitForSingleObject(aCtx->event_queue->isSet, 0) == WAIT_OBJECT_0)
 	{
-		if (!ResetEvent(aCtx->event_queue->isSet))
-			return FALSE;
-
+		/* android_process_event() resets the signal once the queue is drained, so an
+		 * event pushed while we are processing is never lost. */
 		if (!android_process_event(aCtx->event_queue, inst))
 			return FALSE;
 	}
@@ -395,6 +418,9 @@ BOOL android_event_queue_init(freerdp* inst)
 		return FALSE;
 	}
 
+	InitializeCriticalSection(&queue->lock);
+	queue->lockInitialized = TRUE;
+
 	aCtx->event_queue = queue;
 	return TRUE;
 }
@@ -416,6 +442,18 @@ void android_event_queue_uninit(freerdp* inst)
 		{
 			(void)CloseHandle(queue->isSet);
 			queue->isSet = nullptr;
+		}
+
+		/* events that were never processed are freed here, they used to leak */
+		if (queue->lockInitialized)
+		{
+			ANDROID_EVENT* event;
+
+			while ((event = android_pop_event(queue)) != nullptr)
+				android_event_free(event);
+
+			DeleteCriticalSection(&queue->lock);
+			queue->lockInitialized = FALSE;
 		}
 
 		if (queue->events)

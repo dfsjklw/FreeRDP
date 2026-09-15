@@ -23,6 +23,7 @@
     <string name="menu_sys_keyboard">Keyboard</string>
     <string name="menu_ext_keyboard">Function Keys</string>
     <string name="menu_touch_pointer">Touch Pointer</string>
+    <string name="menu_disconnect">Disconnect</string>
     <string name="kbd_win_key">Windows key</string>
     <!-- List section headers -->
     <!-- Search strings -->
@@ -232,6 +233,7 @@
     <string name="settings_security_clear_certificate_cache">Clear Certificate Cache</string>
     <!-- Session strings -->
     <string name="session_double_back_to_exit">Press back again to disconnect</string>
+    <string name="session_pan_handle">Drag to pan the session</string>
     <!-- Activity titles -->
     <string name="title_bookmark_settings">Connection Settings</string>
     <string name="title_application_settings">Settings</string>

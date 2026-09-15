@@ -134,6 +134,10 @@ public class SessionActivity extends AppCompatActivity
 	private boolean connectCancelledByUser = false;
 	private boolean sessionRunning = false;
 	private long backPressedTime = 0;
+	// handle shown right above the keyboard, used to pan the session view
+	private View panHandle;
+	// viewport height of the session scroll view, used to keep the visible centre
+	private int lastViewportHeight = 0;
 
 	private SessionViewModel sessionViewModel;
 	private ScrollView2D scrollView;
@@ -277,12 +281,18 @@ public class SessionActivity extends AppCompatActivity
 				if (inputManager != null)
 					inputManager.toggleKeyboard();
 			}
+			@Override public void onDisconnect()
+			{
+				disconnectSession();
+			}
 		});
 
 		ExtendedKeyboardView keyboard = findViewById(R.id.extended_keyboard);
 
 		scrollView = findViewById(R.id.sessionScrollView);
 		scrollView.setScrollViewListener(null);
+		panHandle = findViewById(R.id.session_pan_handle);
+		setupPanHandle();
 		railManager = new RailWindowManager(this, findViewById(R.id.railContainer), sessionView);
 		sessionViewModel = new ViewModelProvider(this).get(SessionViewModel.class);
 		sessionViewModel.getState().observe(this, this::onConnectionStateChanged);
@@ -487,6 +497,46 @@ public class SessionActivity extends AppCompatActivity
 			}
 		}
 
+		// the pan handle floats right above the keyboard (extended bar and/or IME) and is
+		// only visible while a keyboard is up
+		if (panHandle != null)
+		{
+			final boolean keyboardUp = kbdVisible || imeBottom > 0;
+			final View kbd = extKeyboard;
+			scrollView.post(() -> {
+				int kbdHeight = 0;
+				if (kbd != null && kbd.getVisibility() == View.VISIBLE)
+					kbdHeight = kbd.getHeight();
+
+				final int margin = imeBottom + Math.max(0, kbdHeight);
+				ViewGroup.MarginLayoutParams lp =
+				    (ViewGroup.MarginLayoutParams)panHandle.getLayoutParams();
+				if (lp.bottomMargin != margin)
+				{
+					lp.bottomMargin = margin;
+					panHandle.setLayoutParams(lp);
+				}
+				// only offer the handle when there is actually something to pan to
+				final View content = scrollView.getChildAt(0);
+				final boolean canPan =
+				    content != null && (content.getWidth() > scrollView.getWidth() ||
+				                        content.getHeight() > scrollView.getHeight());
+				panHandle.setVisibility(keyboardUp && canPan ? View.VISIBLE : View.GONE);
+
+				// keep the visible centre of the session while the keyboard shrinks it
+				final int height = scrollView.getHeight();
+				if (keyboardUp && lastViewportHeight > 0 && height > 0 &&
+				    height != lastViewportHeight)
+				{
+					final int delta = lastViewportHeight - height;
+					if (delta > 0)
+						scrollView.scrollBy(0, delta / 2);
+				}
+				if (height > 0)
+					lastViewportHeight = height;
+			});
+		}
+
 		return WindowInsetsCompat.CONSUMED;
 	}
 
@@ -663,6 +713,65 @@ public class SessionActivity extends AppCompatActivity
 		// Go back to home activity (and send intent data back to home)
 		setResult(resultCode, getIntent());
 		finish();
+	}
+
+	// Leaves the running session: disconnect and return to the bookmark list. Used by the
+	// "disconnect" button of the floating toolbar.
+	private void disconnectSession()
+	{
+		if (session == null)
+		{
+			closeSessionActivity(RESULT_CANCELED);
+			return;
+		}
+
+		// mark as user initiated so a pending/failed connection does not report an error
+		connectCancelledByUser = true;
+		if (inputManager != null)
+			inputManager.cancelPendingEvents();
+		LibFreeRDP.disconnect(session.getInstance());
+	}
+
+	// Drag handle that sits above the keyboard: it pans the session view so the parts of
+	// the remote desktop hidden by the keyboard stay reachable.
+	private void setupPanHandle()
+	{
+		if (panHandle == null)
+			return;
+
+		panHandle.setOnTouchListener(new View.OnTouchListener() {
+			private float lastX;
+			private float lastY;
+
+			@Override public boolean onTouch(View v, MotionEvent event)
+			{
+				switch (event.getActionMasked())
+				{
+					case MotionEvent.ACTION_DOWN:
+						lastX = event.getRawX();
+						lastY = event.getRawY();
+						return true;
+
+					case MotionEvent.ACTION_MOVE:
+					{
+						final float x = event.getRawX();
+						final float y = event.getRawY();
+						// the picture follows the finger
+						scrollView.scrollBy((int)(lastX - x), (int)(lastY - y));
+						lastX = x;
+						lastY = y;
+						return true;
+					}
+
+					case MotionEvent.ACTION_UP:
+					case MotionEvent.ACTION_CANCEL:
+						return true;
+
+					default:
+						return false;
+				}
+			}
+		});
 	}
 
 	public void handleBackPressed()

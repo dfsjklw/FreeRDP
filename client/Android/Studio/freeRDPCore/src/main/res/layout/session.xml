@@ -56,6 +56,25 @@
         android:layout_height="match_parent"
         android:visibility="invisible" />
 
+    <!-- Pan grip above the keyboard: a thin, barely visible bar inside a larger touch
+         target, so the session picture can still be moved while the keyboard covers the
+         lower part of the screen. -->
+    <FrameLayout
+        android:id="@+id/session_pan_handle"
+        android:layout_width="match_parent"
+        android:layout_height="28dp"
+        android:layout_alignParentBottom="true"
+        android:contentDescription="@string/session_pan_handle"
+        android:visibility="gone">
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="4dp"
+            android:layout_gravity="center_vertical"
+            android:alpha="0.08"
+            android:background="#FFFFFFFF" />
+    </FrameLayout>
+
     <include
         layout="@layout/floating_toolbar"
         android:layout_width="wrap_content"

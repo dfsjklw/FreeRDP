@@ -19,6 +19,8 @@
     <string name="menu_sys_keyboard">键盘</string>
     <string name="menu_ext_keyboard">功能键</string>
     <string name="menu_touch_pointer">触摸指针</string>
+    <string name="menu_disconnect">断开连接</string>
+    <string name="session_pan_handle">拖动以平移画面</string>
     <!-- List section headers -->
     <!-- Search strings -->
     <!-- List placeholder labels -->

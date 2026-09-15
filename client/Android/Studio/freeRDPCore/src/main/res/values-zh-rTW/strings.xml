@@ -19,6 +19,8 @@
     <string name="menu_sys_keyboard">鍵盤</string>
     <string name="menu_ext_keyboard">功能鍵</string>
     <string name="menu_touch_pointer">觸控指標</string>
+    <string name="menu_disconnect">中斷連線</string>
+    <string name="session_pan_handle">拖曳以平移畫面</string>
     <!-- List section headers -->
     <!-- Search strings -->
     <!-- List placeholder labels -->

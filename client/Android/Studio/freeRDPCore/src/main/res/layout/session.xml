@@ -75,6 +75,24 @@
             android:background="#FFFFFFFF" />
     </FrameLayout>
 
+    <!-- Network characteristics (RTT / bandwidth) as measured by NETCHAR -->
+    <TextView
+        android:id="@+id/session_net_stats"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentEnd="true"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="8dp"
+        android:background="#66000000"
+        android:paddingStart="8dp"
+        android:paddingTop="2dp"
+        android:paddingEnd="8dp"
+        android:paddingBottom="2dp"
+        android:textColor="#FFFFFF"
+        android:textSize="12sp"
+        android:visibility="gone" />
+
     <include
         layout="@layout/floating_toolbar"
         android:layout_width="wrap_content"

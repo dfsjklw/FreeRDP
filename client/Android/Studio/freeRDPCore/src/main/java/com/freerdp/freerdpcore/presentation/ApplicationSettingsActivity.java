@@ -323,6 +323,14 @@ public class ApplicationSettingsActivity
 		                              false);
 	}
 
+	// True when the in-session performance overlay (RTT / throughput / frame rate) is shown.
+	public static boolean getNetworkStatsEnabled(Context context)
+	{
+		SharedPreferences preferences = get(context);
+		return preferences.getBoolean(
+		    context.getString(R.string.preference_key_ui_network_stats), true);
+	}
+
 	public static String getClientName(Context context)
 	{
 		SharedPreferences preferences = get(context);

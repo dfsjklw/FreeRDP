@@ -28,6 +28,11 @@
         android:title="@string/settings_ui_native_touch" />
     <CheckBoxPreference
         android:defaultValue="true"
+        android:key="@string/preference_key_ui_network_stats"
+        android:summary="@string/settings_ui_network_stats_summary"
+        android:title="@string/settings_ui_network_stats" />
+    <CheckBoxPreference
+        android:defaultValue="true"
         android:key="@string/preference_key_ui_ask_on_exit"
         android:title="@string/settings_ui_ask_on_exit" />
     <CheckBoxPreference

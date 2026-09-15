@@ -173,6 +173,8 @@ public class LibFreeRDP
 
 	private static native boolean freerdp_is_native_touch_supported(long inst);
 
+	private static native boolean freerdp_get_network_stats(long inst, int[] values);
+
 	private static native boolean freerdp_send_key_event(long inst, int keycode, boolean down);
 
 	private static native boolean freerdp_send_unicodekey_event(long inst, int keycode,
@@ -608,6 +610,12 @@ public class LibFreeRDP
 	public static boolean isNativeTouchSupported(long inst)
 	{
 		return freerdp_is_native_touch_supported(inst);
+	}
+
+	// Fills values with { bandwidth (kbit/s), average RTT (ms), base RTT (ms) }.
+	public static boolean getNetworkStats(long inst, int[] values)
+	{
+		return freerdp_get_network_stats(inst, values);
 	}
 
 	public static boolean sendKeyEvent(long inst, int keycode, boolean down)

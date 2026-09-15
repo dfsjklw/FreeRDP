@@ -1023,6 +1023,18 @@ static BOOL rdp_client_send_client_info_and_change_state(rdpRdp* rdp)
 		return FALSE;
 	if (!rdp_client_transition_to_state(rdp, CONNECTION_STATE_CONNECT_TIME_AUTO_DETECT_REQUEST))
 		return FALSE;
+
+	/* NETCHAR: install the client side measure handlers and actually start the RTT/bandwidth
+	 * measurement. Upstream only registered the defaults for the server role
+	 * (autodetect_register_server_callbacks()) and the state transition above was a pure
+	 * formality, so a client never measured anything and the values shown in the UI stayed 0
+	 * although RNS_UD_CS_SUPPORT_NETCHAR_AUTODETECT is advertised. The server answers the
+	 * measure requests while the licensing state runs. */
+	autodetect_register_client_callbacks(rdp->autodetect);
+	if (freerdp_settings_get_bool(rdp->settings, FreeRDP_NetworkAutoDetect) && rdp->autodetect &&
+	    rdp->autodetect->OnConnectTimeAutoDetectBegin)
+		autodetect_on_connect_time_auto_detect_begin(rdp->autodetect);
+
 	return TRUE;
 }
 

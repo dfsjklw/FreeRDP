@@ -27,6 +27,10 @@
     <string name="quality_high">高畫質</string>
     <string name="quality_applied">已切換為%1$s，重新連線後生效</string>
     <string name="session_pan_handle">拖曳以平移畫面</string>
+    <string name="session_net_stats">延遲 %1$d ms · %2$.2f MB/s · %3$.1f FPS</string>
+    <string name="session_net_stats_unknown_rtt">延遲 -- ms · %1$.2f MB/s · %2$.1f FPS</string>
+    <string name="settings_ui_network_stats">網路效能監控</string>
+    <string name="settings_ui_network_stats_summary">在畫面角落顯示遠端連線的延遲、吞吐量與影格率。</string>
     <!-- List section headers -->
     <!-- Search strings -->
     <!-- List placeholder labels -->

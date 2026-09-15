@@ -1086,6 +1086,26 @@ void autodetect_register_server_callbacks(rdpAutoDetect* autodetect)
 	    autodetect_on_connect_time_auto_detect_progress_default;
 }
 
+/*
+ * Client side counterpart of autodetect_register_server_callbacks(): the measurement was
+ * never started on a client, so the RTT/bandwidth values used by the UI stayed 0 even
+ * though RNS_UD_CS_SUPPORT_NETCHAR_AUTODETECT is advertised. Sending network
+ * characteristics results is a server duty, so that callback is not installed here.
+ */
+void autodetect_register_client_callbacks(rdpAutoDetect* autodetect)
+{
+	WINPR_ASSERT(autodetect);
+
+	autodetect->RTTMeasureRequest = autodetect_send_rtt_measure_request;
+	autodetect->BandwidthMeasureStart = autodetect_send_bandwidth_measure_start;
+	autodetect->BandwidthMeasurePayload = autodetect_send_bandwidth_measure_payload;
+	autodetect->BandwidthMeasureStop = autodetect_send_bandwidth_measure_stop;
+
+	autodetect->OnConnectTimeAutoDetectBegin = autodetect_on_connect_time_auto_detect_begin_default;
+	autodetect->OnConnectTimeAutoDetectProgress =
+	    autodetect_on_connect_time_auto_detect_progress_default;
+}
+
 FREERDP_AUTODETECT_STATE autodetect_get_state(rdpAutoDetect* autodetect)
 {
 	WINPR_ASSERT(autodetect);

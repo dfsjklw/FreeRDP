@@ -27,6 +27,10 @@
     <string name="quality_high">高画质</string>
     <string name="quality_applied">已切换为%1$s，重新连接后生效</string>
     <string name="session_pan_handle">拖动以平移画面</string>
+    <string name="session_net_stats">延迟 %1$d ms · %2$.2f MB/s · %3$.1f FPS</string>
+    <string name="session_net_stats_unknown_rtt">延迟 -- ms · %1$.2f MB/s · %2$.1f FPS</string>
+    <string name="settings_ui_network_stats">网络性能监控</string>
+    <string name="settings_ui_network_stats_summary">在画面角落显示远程会话的延迟、吞吐率与帧率。</string>
     <!-- List section headers -->
     <!-- Search strings -->
     <!-- List placeholder labels -->

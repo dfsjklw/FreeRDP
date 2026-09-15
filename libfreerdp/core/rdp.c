@@ -2209,6 +2209,18 @@ static state_run_t rdp_recv_callback_int(WINPR_ATTR_UNUSED rdpTransport* transpo
 			break;
 		case CONNECTION_STATE_FINALIZATION_CLIENT_FONT_MAP:
 			status = rdp_handle_sc_flags(rdp, s, FINALIZE_SC_FONT_MAP_PDU, CONNECTION_STATE_ACTIVE);
+			if (state_run_success(status) && (rdp_get_state(rdp) == CONNECTION_STATE_ACTIVE))
+			{
+				/* NETCHAR: the session is active now, so issue the RTT/bandwidth measurement once
+				 * more. The request sent in the connect time auto detect state carries
+				 * RDP_RTT_REQUEST_TYPE_CONNECTTIME, which some servers (e.g. Windows 11) ignore
+				 * completely; with the connection state now at ACTIVE the same helper sends a
+				 * RDP_RTT_REQUEST_TYPE_CONTINUOUS request instead, which is answered. The response
+				 * is handled by rdp_recv_message_channel_pdu() in the ACTIVE state. */
+				if (rdp->autodetect && rdp->autodetect->OnConnectTimeAutoDetectBegin &&
+				    freerdp_settings_get_bool(rdp->settings, FreeRDP_NetworkAutoDetect))
+					autodetect_on_connect_time_auto_detect_begin(rdp->autodetect);
+			}
 			break;
 
 		case CONNECTION_STATE_ACTIVE:

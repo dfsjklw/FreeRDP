@@ -247,6 +247,8 @@
     <string name="settings_ui_auto_scroll_touchpointer">Touch Pointer Auto Scroll</string>
     <string name="settings_ui_native_touch">Native touch input</string>
     <string name="settings_ui_native_touch_summary">Send real multi-touch contacts (MS-RDPEI) to the remote desktop instead of emulating mouse gestures. Only takes effect if the remote supports touch input; gestures are unavailable in this mode.</string>
+    <string name="settings_ui_network_stats">Network performance overlay</string>
+    <string name="settings_ui_network_stats_summary">Show round trip time, throughput and the frame rate of the remote session in a corner of the screen.</string>
     <string name="settings_ui_ask_on_exit">Show Dialog on Exit</string>
     <string name="settings_ui_use_back_as_altf4">Use \"back\" button as Alt+F4</string>
     <string name="settings_cat_power">Power Saving</string>
@@ -259,6 +261,8 @@
     <!-- Session strings -->
     <string name="session_double_back_to_exit">Press back again to disconnect</string>
     <string name="session_pan_handle">Drag to pan the session</string>
+    <string name="session_net_stats">RTT %1$d ms · %2$.2f MB/s · %3$.1f FPS</string>
+    <string name="session_net_stats_unknown_rtt">RTT -- ms · %1$.2f MB/s · %2$.1f FPS</string>
     <!-- Activity titles -->
     <string name="title_bookmark_settings">Connection Settings</string>
     <string name="title_application_settings">Settings</string>
@@ -311,6 +315,7 @@
     <string name="preference_key_ui_ask_on_exit" translatable="false">ui.ask_on_exit</string>
     <string name="preference_key_ui_auto_scroll_touchpointer" translatable="false">ui.auto_scroll_touchpointer</string>
     <string name="preference_key_ui_native_touch" translatable="false">ui.native_touch</string>
+    <string name="preference_key_ui_network_stats" translatable="false">ui.network_stats</string>
     <string name="preference_key_ui_invert_scrolling" translatable="false">ui.invert_scrolling</string>
     <string name="preference_key_ui_swap_mouse_buttons" translatable="false">ui.swap_mouse_buttons</string>
     <string name="preference_key_ui_use_back_as_altf4" translatable="false">ui.use_back_as_altf4</string>

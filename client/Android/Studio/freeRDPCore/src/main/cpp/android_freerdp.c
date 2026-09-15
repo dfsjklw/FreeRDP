@@ -1159,6 +1159,37 @@ Java_com_freerdp_freerdpcore_services_LibFreeRDP_freerdp_1is_1native_1touch_1sup
 	return (afc->common.rdpei != nullptr) ? JNI_TRUE : JNI_FALSE;
 }
 
+/*
+ * Network characteristics as measured by NETCHAR (bandwidth measure + RTT measure).
+ * values[0] = bandwidth in kbit/s, values[1] = average RTT in ms, values[2] = base RTT in ms.
+ * Returns JNI_FALSE when the client has no autodetect context (or no measurement yet).
+ */
+JNIEXPORT jboolean JNICALL
+Java_com_freerdp_freerdpcore_services_LibFreeRDP_freerdp_1get_1network_1stats(JNIEnv* env,
+                                                                             jclass cls,
+                                                                             jlong instance,
+                                                                             jintArray values)
+{
+	WINPR_UNUSED(cls);
+	freerdp* inst = (freerdp*)instance;
+
+	if (!inst || !inst->context || !values)
+		return JNI_FALSE;
+
+	rdpAutoDetect* autodetect = autodetect_get(inst->context);
+	if (!autodetect)
+		return JNI_FALSE;
+
+	if ((*env)->GetArrayLength(env, values) < 3)
+		return JNI_FALSE;
+
+	const jint out[3] = { (jint)autodetect->netCharBandwidth,
+		                  (jint)autodetect->netCharAverageRTT,
+		                  (jint)autodetect->netCharBaseRTT };
+	(*env)->SetIntArrayRegion(env, values, 0, 3, out);
+	return JNI_TRUE;
+}
+
 static jboolean android_push_clipboard_event(freerdp* inst, const void* data, size_t data_length,
                                              const char* mimeType)
 {

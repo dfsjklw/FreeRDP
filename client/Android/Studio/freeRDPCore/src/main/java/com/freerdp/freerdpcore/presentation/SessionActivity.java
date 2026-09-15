@@ -136,6 +136,21 @@ public class SessionActivity extends AppCompatActivity
 	private long backPressedTime = 0;
 	// handle shown right above the keyboard, used to pan the session view
 	private View panHandle;
+	// live network indicators (measured client side, shown in a corner of the session view)
+	private android.widget.TextView netStatsView;
+	private static final int NET_STATS_INTERVAL_MS = 2000;
+	private long netStatsLastBytes = -1;
+	private long netStatsLastTime = 0;
+	private volatile int netStatsRttMs = -1;
+	private String netStatsPingHost = null;
+	private int netStatsPingTick = 0;
+	private volatile boolean netStatsPingInFlight = false;
+	private java.util.concurrent.ExecutorService netStatsExecutor = null;
+	// frame counter of the remote session, incremented on every graphics update the server sends
+	private final java.util.concurrent.atomic.AtomicLong netStatsFrames =
+	    new java.util.concurrent.atomic.AtomicLong();
+	private long netStatsLastFrames = -1;
+	private long netStatsLastFrameTime = 0;
 	// viewport height of the session scroll view, used to keep the visible centre
 	private int lastViewportHeight = 0;
 
@@ -379,6 +394,11 @@ public class SessionActivity extends AppCompatActivity
 		if (connectThread != null)
 		{
 			connectThread.interrupt();
+		}
+		if (netStatsExecutor != null)
+		{
+			netStatsExecutor.shutdownNow();
+			netStatsExecutor = null;
 		}
 		super.onDestroy();
 		Log.v(TAG, "Session.onDestroy");
@@ -694,6 +714,185 @@ public class SessionActivity extends AppCompatActivity
 		connectThread.start();
 	}
 
+	// ---------------------------------------------------------------- network stats
+	// Live indicators shown in a corner of the session while the connection is up. Both values are
+	// measured on the client so that they do not depend on the server answering the RDP NETCHAR
+	// (RTT / bandwidth) measurement - Windows 11 simply ignores those requests:
+	//   * throughput: delta of the process traffic counters (android.net.TrafficStats)
+	//   * latency:    a locally issued ICMP echo request to the session host
+	private final Runnable netStatsUpdater = new Runnable() {
+		@Override public void run()
+		{
+			updateNetworkStats();
+			uiHandler.postDelayed(this, NET_STATS_INTERVAL_MS);
+		}
+	};
+
+	private void startNetworkStats()
+	{
+		if (session == null)
+			return;
+		if (netStatsView == null)
+			netStatsView = findViewById(R.id.session_net_stats);
+
+		final BookmarkBase bookmark = session.getBookmark();
+		netStatsPingHost = (bookmark != null) ? bookmark.getHostname() : null;
+		netStatsLastBytes = -1;
+		netStatsLastTime = 0;
+		netStatsRttMs = -1;
+		netStatsPingTick = 0;
+		netStatsFrames.set(0);
+		netStatsLastFrames = -1;
+		netStatsLastFrameTime = 0;
+		if (netStatsExecutor == null)
+			netStatsExecutor = java.util.concurrent.Executors.newSingleThreadExecutor();
+
+		uiHandler.removeCallbacks(netStatsUpdater);
+		uiHandler.post(netStatsUpdater);
+	}
+
+	private void stopNetworkStats()
+	{
+		uiHandler.removeCallbacks(netStatsUpdater);
+		if (netStatsView != null)
+			netStatsView.setVisibility(View.GONE);
+	}
+
+	// MiB/s (displayed as MB/s, 1 MB = 1024 * 1024 bytes) over the last sampling interval,
+	// or -1 while no valid delta exists yet.
+	private double sampleBandwidthMBps()
+	{
+		final long rx = android.net.TrafficStats.getUidRxBytes(android.os.Process.myUid());
+		final long tx = android.net.TrafficStats.getUidTxBytes(android.os.Process.myUid());
+		if ((rx < 0) || (tx < 0))
+			return -1;
+
+		final long total = rx + tx;
+		final long now = android.os.SystemClock.elapsedRealtime();
+		if ((netStatsLastBytes < 0) || (netStatsLastTime == 0) || (now <= netStatsLastTime))
+		{
+			netStatsLastBytes = total;
+			netStatsLastTime = now;
+			return -1;
+		}
+
+		final long deltaBytes = total - netStatsLastBytes;
+		final long deltaMs = now - netStatsLastTime;
+		netStatsLastBytes = total;
+		netStatsLastTime = now;
+		if (deltaBytes < 0)
+			return -1;
+		// bytes per millisecond * 1000 == bytes/s, divided by 1024 * 1024 == MB/s
+		return (deltaBytes * 1000.0) / deltaMs / (1024.0 * 1024.0);
+	}
+
+	// Frames per second the remote session pushed to this client over the last sampling
+	// interval, or -1 while no valid sample exists. OnGraphicsUpdate() counts the updates,
+	// so the value reflects what the server actually rendered (0 while the desktop is idle).
+	private double sampleFps()
+	{
+		final long frames = netStatsFrames.get();
+		final long now = android.os.SystemClock.elapsedRealtime();
+		if ((netStatsLastFrames < 0) || (netStatsLastFrameTime == 0) ||
+		    (now <= netStatsLastFrameTime))
+		{
+			netStatsLastFrames = frames;
+			netStatsLastFrameTime = now;
+			return -1;
+		}
+
+		final long deltaFrames = frames - netStatsLastFrames;
+		final long deltaMs = now - netStatsLastFrameTime;
+		netStatsLastFrames = frames;
+		netStatsLastFrameTime = now;
+		if ((deltaFrames < 0) || (deltaMs <= 0))
+			return -1;
+		return (deltaFrames * 1000.0) / deltaMs;
+	}
+
+	// One ICMP echo request, returning the round trip time in ms or -1 when unavailable.
+	private int measureRttMs(String host)
+	{
+		if ((host == null) || host.isEmpty())
+			return -1;
+		try
+		{
+			final java.lang.Process process =
+			    new ProcessBuilder("/system/bin/ping", "-c", "1", "-W", "2", host)
+			        .redirectErrorStream(true)
+			        .start();
+			final java.io.BufferedReader reader =
+			    new java.io.BufferedReader(new java.io.InputStreamReader(process.getInputStream()));
+			try
+			{
+				String line;
+				while ((line = reader.readLine()) != null)
+				{
+					final int index = line.indexOf("time=");
+					if (index >= 0)
+					{
+						final String value = line.substring(index + 5).trim().split("\\s+")[0];
+						return Math.round(Float.parseFloat(value));
+					}
+				}
+			}
+			finally
+			{
+				reader.close();
+				process.destroy();
+			}
+		}
+		catch (Exception e)
+		{
+			Log.w(TAG, "ping failed: " + e);
+		}
+		return -1;
+	}
+
+	private void updateNetworkStats()
+	{
+		if ((netStatsView == null) || (session == null))
+			return;
+
+		// the overlay can be switched off in the application settings at any time
+		if (!ApplicationSettingsActivity.getNetworkStatsEnabled(this))
+		{
+			netStatsView.setVisibility(View.GONE);
+			return;
+		}
+
+		final double mbps = sampleBandwidthMBps();
+		final double fps = sampleFps();
+		final int rtt = netStatsRttMs;
+
+		// Refresh the latency every third sample in the background; ping blocks.
+		netStatsPingTick++;
+		if ((netStatsPingHost != null) && ((netStatsPingTick % 3) == 1) && !netStatsPingInFlight &&
+		    (netStatsExecutor != null))
+		{
+			netStatsPingInFlight = true;
+			final String host = netStatsPingHost;
+			netStatsExecutor.execute(() -> {
+				netStatsRttMs = measureRttMs(host);
+				netStatsPingInFlight = false;
+			});
+		}
+
+		if ((mbps < 0.0) && (rtt <= 0) && (fps < 0.0))
+		{
+			netStatsView.setVisibility(View.GONE);
+			return;
+		}
+
+		final double mbs = (mbps > 0.0) ? mbps : 0.0;
+		final double rate = (fps > 0.0) ? fps : 0.0;
+		if (rtt > 0)
+			netStatsView.setText(getString(R.string.session_net_stats, rtt, mbs, rate));
+		else
+			netStatsView.setText(
+				getString(R.string.session_net_stats_unknown_rtt, mbs, rate));
+		netStatsView.setVisibility(View.VISIBLE);
+	}
 
 	// Lets the user pick a quality/bandwidth profile for the running session. The choice is
 	// written into the bookmark and takes effect on the next connect.
@@ -932,6 +1131,9 @@ public class SessionActivity extends AppCompatActivity
 
 	@Override public void OnGraphicsUpdate(int x, int y, int width, int height)
 	{
+		// frame counter for the performance overlay (see sampleFps())
+		netStatsFrames.incrementAndGet();
+
 		LibFreeRDP.updateGraphics(session.getInstance(), bitmap, x, y, width, height);
 
 		sessionView.addInvalidRegion(new Rect(x, y, x + width, y + height));
@@ -1145,6 +1347,7 @@ public class SessionActivity extends AppCompatActivity
 
 		// bind session
 		bindSession();
+		startNetworkStats();
 
 		if (ApplicationSettingsActivity.getKeepScreenOnWhenConnected(this))
 		{
@@ -1204,6 +1407,8 @@ public class SessionActivity extends AppCompatActivity
 		}
 
 		dialogs.dismissProgress();
+
+		stopNetworkStats();
 
 		railManager.clear();
 

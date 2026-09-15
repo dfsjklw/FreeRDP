@@ -42,8 +42,11 @@ public class SessionInputManager
 
 	private static final int MSG_SEND_MOVE_EVENT = 1;
 	private static final int MSG_SCROLLING_REQUESTED = 2;
-	// the RDPEI channel is negotiated shortly after the connection is up
-	private static final int NATIVE_TOUCH_RECHECK_DELAY_MS = 1500;
+	// MS-RDPEI is negotiated as a dynamic virtual channel that the *remote* opens at its own
+	// pace (measured ~2.5-3.5 s after the session was bound against a Windows 11 host), so the
+	// client polls for it instead of rechecking once after a fixed delay.
+	private static final int NATIVE_TOUCH_RECHECK_DELAY_MS = 500;
+	private static final int NATIVE_TOUCH_MAX_RECHECKS = 24;
 
 	private final Context context;
 	private final KeyboardMapper keyboardMapper;
@@ -55,6 +58,8 @@ public class SessionInputManager
 
 	// Native FreeRDP instance handle. 0 until attachSession() is called (i.e. before connect).
 	private long instance = 0;
+	// RDPEI negotiation checks left for the current session.
+	private int nativeTouchRechecks = 0;
 	private Bitmap bitmap;
 	private int screenWidth;
 	private int screenHeight;
@@ -89,9 +94,8 @@ public class SessionInputManager
 		this.instance = instance;
 		this.bitmap = surface;
 		keyboardMapper.reset(this);
+		nativeTouchRechecks = 0;
 		updateNativeTouchMode();
-		// the RDPEI channel may only be negotiated once the connection is fully up
-		handler.postDelayed(this::updateNativeTouchMode, NATIVE_TOUCH_RECHECK_DELAY_MS);
 	}
 
 	// Called when the session bitmap is created or replaced (OnSettingsChanged / OnGraphicsResize).
@@ -286,10 +290,22 @@ public class SessionInputManager
 		    (instance != 0) && ApplicationSettingsActivity.getNativeTouch(context);
 		final boolean supported = wanted && LibFreeRDP.isNativeTouchSupported(instance);
 		final boolean enabled = wanted && supported;
+		final boolean changed = (enabled != sessionView.isNativeTouchEnabled());
 
 		sessionView.setNativeTouchEnabled(enabled);
-		Log.i(TAG, "native touch: requested=" + wanted + ", remote supports RDPEI=" + supported +
-		               " -> " + (enabled ? "enabled" : "disabled"));
+		if (changed)
+			Log.i(TAG, "native touch: requested=" + wanted + ", remote supports RDPEI=" +
+			               supported + " -> " + (enabled ? "enabled" : "disabled") + " after " +
+			               nativeTouchRechecks + " checks");
+
+		// Keep polling until the remote opens the RDPEI channel; a single fixed-delay recheck
+		// lost the race against the DVC negotiation and left native touch off for the whole
+		// session.
+		if (wanted && !enabled && (nativeTouchRechecks < NATIVE_TOUCH_MAX_RECHECKS))
+		{
+			nativeTouchRechecks++;
+			handler.postDelayed(this::updateNativeTouchMode, NATIVE_TOUCH_RECHECK_DELAY_MS);
+		}
 	}
 
 	private void sendDelayedMoveEvent(int x, int y)

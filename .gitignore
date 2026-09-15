@@ -3,3 +3,8 @@
 build
 checker
 abi-checker
+
+# local development/testing notes and agent scratch data (machine specific
+# addresses, credentials and screenshots must not be published)
+ANDROID-TESTING.md
+.reasonix/
